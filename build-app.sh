@@ -17,12 +17,9 @@ if [ -f Resources/AppIcon.icns ]; then
   cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 fi
 
-# SwiftPM resource bundles (the 音源 glue script lives in one)
-for bundle in .build/"$CONFIG"/*.bundle; do
-  [ -e "$bundle" ] || continue
-  cp -R "$bundle" "$APP/Contents/Resources/"
-  cp -R "$bundle" "$APP/Contents/MacOS/"
-done
+# Runtime data (the 音源 glue script). Copied as a plain resource: a nested
+# .bundle is treated as code by codesign and would need its own signature.
+cp Sources/LxSourceKit/glue.js "$APP/Contents/Resources/glue.js"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -51,5 +48,6 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-codesign --force --sign - --identifier dev.cadence.player "$APP" >/dev/null 2>&1 || true
+codesign --force --sign - --identifier dev.cadence.player "$APP"
+codesign --verify --deep --strict "$APP"
 echo "built $APP"

@@ -53,7 +53,10 @@ public final class LXEngine {
   // MARK: - setup
 
   private static func resourceURL(_ name: String, _ ext: String) -> URL? {
-    Bundle.module.url(forResource: name, withExtension: ext)
+    // Inside an .app the glue lives in Contents/Resources; when running the plain
+    // command line tool it sits in SwiftPM's resource bundle next to the binary.
+    Bundle.main.url(forResource: name, withExtension: ext)
+      ?? Bundle.module.url(forResource: name, withExtension: ext)
   }
 
   private func evaluate(resource name: String) throws {
