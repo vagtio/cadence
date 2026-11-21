@@ -1,7 +1,8 @@
 # Cadence · 韵律 — 原生 macOS 音乐播放器
 
-用 SwiftUI + JavaScriptCore + AVAudioEngine 重写 Q-music 的关键路径：
-**保留 LX 音源脚本生态，丢掉 Chromium**。
+**基于 [LX 音乐](https://github.com/lyswhut/lx-music-desktop) 生态的原生实现**：
+兼容 LX 音源脚本格式，用 SwiftUI + JavaScriptCore + AVAudioEngine 重写播放器本身，
+**保留音源生态，丢掉 Chromium**。
 
 界面上的四个来源用隐喻名，不出现上游品牌：
 
@@ -11,6 +12,27 @@
 | wy | 焰 | 红色 · 热榜 |
 | kw | 珀 | 橙色 · 琥珀 |
 | tx | 萤 | 绿色 · 微光 |
+
+### 与上游的关系
+
+Cadence 是**独立实现**，不是 LX 音乐 / Q-music 的分支：
+
+| | LX 音乐（洛雪） | Q-music | Cadence |
+|---|---|---|---|
+| 技术栈 | Electron + Vue | Electron + Vue | **SwiftUI + JavaScriptCore** |
+| 音源脚本 | 定义并维护 `lx` 协议 | 沿用 | **兼容同一份 `.js` 脚本** |
+| 代码来源 | 上游 | fork 自 LX | **不含上游代码** |
+
+借鉴的是**协议与设计**，不是代码：
+
+- 音源脚本接口：`lx.EVENT_NAMES` / `lx.request` / `lx.on('request')` / `lx.send(inited)`、
+  `lx.utils.crypto|buffer|zlib`、回应校验规则（URL ≤ 2048、`^https?:`）——均按上游行为逐条对齐
+- `musicInfo` 字段兼容：照 `toOldMusicInfo` 的旧结构（`songmid` / `hash` / `rid` /
+  `strMediaMid` / `copyrightId` …）构造，第三方脚本无需修改
+- 界面与交互参考：双源回退、桌面歌词独立浮窗、下载按平台分目录
+
+上游许可以 **Apache-2.0** 发布，本仓库代码为独立编写，采用 [MIT](./LICENSE)；
+上游名称与商标归其作者所有，界面中的来源一律用隐喻名（鲸/焰/珀/萤）。
 
 ### 命名与迁移
 
