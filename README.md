@@ -29,7 +29,7 @@
 | 渲染 | Chromium | SwiftUI |
 | 音源脚本 | 定义 `lx` 协议 | 兼容同一份 `.js` |
 | 内存 | 每音源一个渲染进程 | 每音源一个 `JSContext` |
-| 打包 | Electron | 3 MB `.app` |
+| 打包 | Electron | 1.5 MB `.app`（arm64） |
 
 ## 特性
 
@@ -43,9 +43,9 @@
 
 ## 安装
 
-### 下载安装包（Intel + Apple Silicon 通用）
+### 下载安装包（Apple Silicon）
 
-1. 到 [Releases](https://github.com/vagtio/cadence/releases/latest) 下载 `Cadence-1.0.0-universal.dmg`
+1. 到 [Releases](https://github.com/vagtio/cadence/releases/latest) 下载 `Cadence-1.0.0-arm64.dmg`
 2. 打开 DMG，把 Cadence 拖到旁边的 Applications
 3. **首次打开若被系统拦截**：右键点 App → 打开（ad-hoc 签名，未公证）
 
@@ -55,7 +55,7 @@
 xattr -dr com.apple.quarantine /Applications/Cadence.app
 ```
 
-要求 macOS 13 或更高，通用二进制（x86_64 + arm64）。
+要求 macOS 13 或更高，**Apple Silicon（M 系列）**。
 
 ### 从源码构建
 
@@ -201,8 +201,7 @@ ad-hoc 签名、未公证（公证需要付费 Apple Developer 账号）。两�
    闲置 90 秒（菜单栏模式 30 秒）会释放引擎，代价是下次播放多一次初始化。
 
 **Intel Mac 能用吗？**
-能，发布的是通用二进制（x86_64 + arm64）。自己构建时用
-`./build-app.sh release universal`。
+不能，只发布 Apple Silicon 构建（arm64）。
 
 ## 与上游 LX 音乐的关系
 

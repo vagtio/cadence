@@ -4,17 +4,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 CONFIG="${1:-release}"
-MODE="${2:-native}"
-
-if [ "$MODE" = "universal" ]; then
-  # Intel + Apple Silicon in one bundle. The only C dependency (zlib shim) is
-  # architecture neutral, so both slices build on either host.
-  swift build -c "$CONFIG" --arch arm64 --arch x86_64 --product Cadence
-  BIN=".build/out/Products/Release/Cadence"
-else
-  swift build -c "$CONFIG" --product Cadence
-  BIN=".build/$CONFIG/Cadence"
-fi
+# Apple Silicon only: the app ships arm64, which keeps the bundle at 1.5 MB and
+# avoids cross-compiling for a target nobody asked for.
+swift build -c "$CONFIG" --product Cadence
+BIN=".build/$CONFIG/Cadence"
 APP=".build/Cadence.app"
 
 rm -rf "$APP"
