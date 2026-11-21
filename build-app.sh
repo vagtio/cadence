@@ -4,8 +4,17 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 CONFIG="${1:-release}"
-swift build -c "$CONFIG" --product Cadence
-BIN=".build/$CONFIG/Cadence"
+MODE="${2:-native}"
+
+if [ "$MODE" = "universal" ]; then
+  # Intel + Apple Silicon in one bundle. The only C dependency (zlib shim) is
+  # architecture neutral, so both slices build on either host.
+  swift build -c "$CONFIG" --arch arm64 --arch x86_64 --product Cadence
+  BIN=".build/out/Products/Release/Cadence"
+else
+  swift build -c "$CONFIG" --product Cadence
+  BIN=".build/$CONFIG/Cadence"
+fi
 APP=".build/Cadence.app"
 
 rm -rf "$APP"
@@ -50,4 +59,4 @@ PLIST
 
 codesign --force --sign - --identifier dev.cadence.player "$APP"
 codesign --verify --deep --strict "$APP"
-echo "built $APP"
+echo "built $APP ($(lipo -archs "$APP/Contents/MacOS/Cadence"))"

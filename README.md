@@ -43,13 +43,19 @@
 
 ## 安装
 
-### 下载安装包（Apple Silicon）
+### 下载安装包（Intel + Apple Silicon 通用）
 
-1. 到 [Releases](https://github.com/vagtio/cadence/releases/latest) 下载 `Cadence-x.y.z-arm64.dmg`
-2. 拖进「应用程序」
+1. 到 [Releases](https://github.com/vagtio/cadence/releases/latest) 下载 `Cadence-1.0.0-universal.dmg`
+2. 打开 DMG，把 Cadence 拖到旁边的 Applications
 3. **首次打开若被系统拦截**：右键点 App → 打开（ad-hoc 签名，未公证）
 
-要求 macOS 13+，arm64。
+或者一条命令解决拦截：
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Cadence.app
+```
+
+要求 macOS 13 或更高，通用二进制（x86_64 + arm64）。
 
 ### 从源码构建
 
@@ -172,7 +178,12 @@ QMUSIC_SOURCE=<script.js> .build/Cadence.app/Contents/MacOS/Cadence --selftest
 ## 常见问题
 
 **打不开，提示无法验证开发者？**
-ad-hoc 签名、未公证。右键 → 打开，或 `xattr -d com.apple.quarantine /Applications/Cadence.app`。
+ad-hoc 签名、未公证（公证需要付费 Apple Developer 账号）。两种办法：
+
+- 右键点 App → 打开 → 再点「打开」
+- 或者 `xattr -dr com.apple.quarantine /Applications/Cadence.app`
+
+只需处理一次，之后正常双击。
 
 **导入音源后列表里没有？**
 脚本初始化失败会被跳过（日志里有原因）。常见原因：脚本自身要先联网校验，或链接指向的不是 `.js`。
@@ -189,8 +200,9 @@ ad-hoc 签名、未公证。右键 → 打开，或 `xattr -d com.apple.quaranti
 2. 音源脚本是第三方代码，体积从 4 KB 到 640 KB 不等，会自己开定时器。
    闲置 90 秒（菜单栏模式 30 秒）会释放引擎，代价是下次播放多一次初始化。
 
-**有 Intel 版吗？**
-目前只有 arm64。需要通用包的话要另编 x86_64 依赖。
+**Intel Mac 能用吗？**
+能，发布的是通用二进制（x86_64 + arm64）。自己构建时用
+`./build-app.sh release universal`。
 
 ## 与上游 LX 音乐的关系
 
@@ -209,7 +221,6 @@ Cadence 把 LX 音乐当作**协议来源**，而不是代码来源：
 
 - [ ] 曲库 / 歌单 / 播放历史（SQLite 持久化）
 - [ ] seek 使用 Range 请求，拖动不必等顺序下载
-- [ ] 通用二进制（Intel + Apple Silicon）
 - [ ] KRC 逐字歌词
 - [ ] Developer ID 签名与公证
 
