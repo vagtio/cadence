@@ -1,10 +1,79 @@
-# Cadence · 韵律 — 原生 macOS 音乐播放器
+# Cadence · 韵律
 
-**基于 [LX 音乐](https://github.com/lyswhut/lx-music-desktop) 生态的原生实现**：
-兼容 LX 音源脚本格式，用 SwiftUI + JavaScriptCore + AVAudioEngine 重写播放器本身，
-**保留音源生态，丢掉 Chromium**。
+**基于 [LX 音乐](https://github.com/lyswhut/lx-music-desktop) 生态的原生 macOS 音乐播放器** ——
+用 SwiftUI + JavaScriptCore + AVAudioEngine 重写播放器，兼容 LX 音源脚本，去掉 Chromium。
 
-界面上的四个来源用隐喻名，不出现上游品牌：
+![macOS](https://img.shields.io/badge/macOS-13%2B-blue)
+![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange)
+![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![Release](https://img.shields.io/github/v/release/vagtio/cadence?label=release)
+![Downloads](https://img.shields.io/github/downloads/vagtio/cadence/total)
+
+<img src="docs/screenshots/search.jpg" alt="Cadence 搜索页：真实封面、平台切换、底部播放条">
+
+<p align="center">
+  <img src="docs/screenshots/lyric.jpg" width="720" alt="桌面歌词浮窗">
+</p>
+
+---
+
+## 这是什么
+
+一个能装进「应用程序」、关掉窗口还在菜单栏放歌的 macOS 播放器。
+音源不是内置的：导入一份 LX 格式的 `.js` 音源脚本，它就能在四个来源之间搜索、播放、下载。
+
+和 Electron 版本的区别只有一件事：**播放器本身是原生的**。
+
+| | LX 音乐（洛雪） | Cadence |
+|---|---|---|
+| 渲染 | Chromium | SwiftUI |
+| 音源脚本 | 定义 `lx` 协议 | 兼容同一份 `.js` |
+| 内存 | 每音源一个渲染进程 | 每音源一个 `JSContext` |
+| 打包 | Electron | 3 MB `.app` |
+
+## 特性
+
+- **渐进流播放**：点下播放 0.5–0.6 秒出声，不等整首下完；缓冲不足自动暂停、够了继续
+- **原生音频链**：`AVAudioPlayerNode → 10 段 EQ → 变速变调 → mixer`，保留 EQ 与 0.5–2.0x 变速
+- **四平台**：搜索、取链、歌词；酷我没有歌词接口时自动用其它源补齐
+- **下载**：可选音质、并发上限 3、失败重试；MP3 把**封面和歌词写进文件本身**（ID3v2.3），FLAC/M4A 落同名 `.lrc`/`.jpg`
+- **桌面歌词**：无边框 `NSPanel`，非激活、全空间常驻、位置记忆、当前行高亮
+- **菜单栏常驻**：关窗口不退出，菜单里能播放/切歌/唤回窗口
+- **macOS 细节**：媒体键、控制中心进度可拖、`⌘1/2/3` 切栏、窗口与偏好记忆
+
+## 安装
+
+### 下载安装包（Apple Silicon）
+
+1. 到 [Releases](https://github.com/vagtio/cadence/releases/latest) 下载 `Cadence-x.y.z-arm64.dmg`
+2. 拖进「应用程序」
+3. **首次打开若被系统拦截**：右键点 App → 打开（ad-hoc 签名，未公证）
+
+要求 macOS 13+，arm64。
+
+### 从源码构建
+
+```sh
+git clone https://github.com/vagtio/cadence.git
+cd cadence
+./build-app.sh                 # 生成 .build/Cadence.app
+open .build/Cadence.app
+```
+
+只需要 Swift 6 工具链（Command Line Tools 即可，无需完整 Xcode）。
+App 图标由 `swift Tools/make-icon.swift` 生成，仓库里已带 `Resources/AppIcon.icns`。
+
+## 首次使用：导入音源
+
+Cadence **不分发音源脚本**。第一次打开是空态，需要一份 LX 格式的 `.js` 音源：
+
+1. 侧栏「音源」→「从链接导入…」→ 粘贴脚本直链，回车
+2. 或「导入脚本…」选择本地文件
+
+脚本会被复制到 `~/Library/Application Support/Cadence/Sources/`，下次启动自动加载。
+每个脚本在**独立的 `JSContext` + `JSVirtualMachine`** 里运行，不用 WebView，互相隔离。
+
+界面里的四个来源用隐喻名，不出现上游品牌：
 
 | 内部 | 显示 | 取意 |
 |---|---|---|
@@ -13,189 +82,140 @@
 | kw | 珀 | 橙色 · 琥珀 |
 | tx | 萤 | 绿色 · 微光 |
 
-### 与上游的关系
+## 快捷键
 
-Cadence 是**独立实现**，不是 LX 音乐 / Q-music 的分支：
-
-| | LX 音乐（洛雪） | Q-music | Cadence |
-|---|---|---|---|
-| 技术栈 | Electron + Vue | Electron + Vue | **SwiftUI + JavaScriptCore** |
-| 音源脚本 | 定义并维护 `lx` 协议 | 沿用 | **兼容同一份 `.js` 脚本** |
-| 代码来源 | 上游 | fork 自 LX | **不含上游代码** |
-
-借鉴的是**协议与设计**，不是代码：
-
-- 音源脚本接口：`lx.EVENT_NAMES` / `lx.request` / `lx.on('request')` / `lx.send(inited)`、
-  `lx.utils.crypto|buffer|zlib`、回应校验规则（URL ≤ 2048、`^https?:`）——均按上游行为逐条对齐
-- `musicInfo` 字段兼容：照 `toOldMusicInfo` 的旧结构（`songmid` / `hash` / `rid` /
-  `strMediaMid` / `copyrightId` …）构造，第三方脚本无需修改
-- 界面与交互参考：双源回退、桌面歌词独立浮窗、下载按平台分目录
-
-上游许可以 **Apache-2.0** 发布，本仓库代码为独立编写，采用 [MIT](./LICENSE)；
-上游名称与商标归其作者所有，界面中的来源一律用隐喻名（鲸/焰/珀/萤）。
-
-### 命名与迁移
-
-内部标识也一并改了，不再有 `QMusicNative` 残留：
-
-| 项 | 旧 | 新 |
-|---|---|---|
-| 产物 / 可执行文件 | `QMusicNative.app` | `Cadence.app` / `Contents/MacOS/Cadence` |
-| Bundle ID | `dev.lxspike.qmusicnative` | `dev.cadence.player` |
-| 数据目录 | `Application Support/QMusicNative` | `Application Support/Cadence` |
-| 缓存目录 | `Caches/QMusicNative` | `Caches/Cadence` |
-| 下载目录 | `~/Music/Q Music/<平台>` | `~/Music/Cadence/<鲸\|焰\|珀\|萤>` |
-| UserDefaults 域 | `dev.lxspike.qmusicnative` | `dev.cadence.player` |
-
-`Migration.swift` 在首次启动时做一次性搬家：移动三个目录、复制偏好（含把
-`downloadDirectory` 里的旧路径改写）、并把旧的平台名下载文件夹
-（酷狗/网易云/酷我/QQ 音乐）改成隐喻名（鲸/焰/珀/萤）。已验证：旧下载的 flac 仍在
-`~/Music/Cadence/鲸/`。
-
-```
-音源脚本(.js) ──JavaScriptCore──▶ 播放地址
-                                      │
-酷狗公开接口 ──▶ 搜索 / 歌词          ▼
-                              URLSession 下载
-                                      │
-                    AVAudioEngine: playerNode → 10 段 EQ → 变速变调 → mixer
-                                      │
-              SwiftUI 界面 + NSPanel 桌面歌词 + MPRemoteCommandCenter 媒体键
-```
-
-## 目录
-
-| 路径 | 作用 |
+| 快捷键 | 动作 |
 |---|---|
-| `Sources/LxSourceKit/` | 音源运行时：`LXEngine`（JSC + `lx` 桥 + crypto/buffer/zlib） |
-| `Sources/lxspike/` | 命令行验证器（Phase 0 的产物，`RESULTS.md` 里的数据都来自它） |
-| `Sources/Cadence/` | macOS App：音频引擎、搜索、歌词、界面、自检 |
-| `Sources/Cadence/Brand.swift` | 产品名与平台隐喻名（改名只改这里） |
-| `scripts/` | mock 后端 + 全表面测试音源 |
-| `build-app.sh` | 打包成 `Cadence.app`（Info.plist + ad-hoc 签名） |
+| `⌘F` | 聚焦搜索框 |
+| 单击 / 双击列表行 | 选中 / 播放 |
+| `空格` | 播放 / 暂停 |
+| `⌘D` | 下载选中歌曲（未选中时下载正在播放的） |
+| `⌘1` `⌘2` `⌘3` | 搜索 / 下载 / 音源 |
+| `⌘⇧L` | 显示 / 隐藏桌面歌词 |
+| `⌘0` | 从菜单栏唤回主窗口 |
+| `⌘,` | 设置 |
 
-## 构建与运行
+## 架构
 
-```sh
-# 命令行验证器（不需要导入音源，用内置 mock 或真实脚本）
-swift build && ./.build/debug/lxspike <source.js> --source kg --verbose
-
-# App
-./build-app.sh                       # 生成 .build/Cadence.app
-open .build/Cadence.app
+```text
+音源脚本(.js) ──JavaScriptCore──▶ 播放地址
+                                    │
+酷狗/网易云/酷我/QQ 公开接口 ──▶ 搜索 · 歌词 · 封面
+                                    │
+                     URLSession 增量下载 ──▶ 临时文件（持续增长）
+                                    │
+        后台读循环重开文件、只读新增段 ──▶ PCM ──▶ playerNode
+                                                    │
+                              10 段 EQ ─▶ 变速 ─▶ mixer ─▶ 输出
 ```
 
-首次启动是空态：侧栏「音源」→「导入脚本…」选一个 LX 格式的 `.js`。
-脚本会复制到 `~/Library/Application Support/Cadence/Sources/`，下次自动加载。
+| 目录 | 职责 |
+|---|---|
+| `Sources/LxSourceKit/` | 音源运行时：`LXEngine`（JSC + `lx` 桥 + crypto/buffer/zlib + 定时器） |
+| `Sources/Cadence/AudioEngine.swift` | 渐进流、分段解码、EQ、变速 |
+| `Sources/Cadence/Platforms.swift` | 四平台搜索 / 歌词 / 封面 |
+| `Sources/Cadence/DownloadManager.swift` | 队列、并发、进度 |
+| `Sources/Cadence/MetadataWriter.swift` | ID3v2.3 封面与歌词写入 |
+| `Sources/Cadence/Views.swift` | SwiftUI 界面 |
+| `Sources/Cadence/SelfTest.swift` | 无界面自检与截图 |
+| `Sources/lxspike/` | 命令行验证器（Phase 0 的产物） |
 
-### 无界面自检
+## 实测
 
-```sh
-QMUSIC_SOURCE=/path/to/source.js \
-  .build/Cadence.app/Contents/MacOS/Cadence --selftest
-```
+平台能力（真实接口，非 mock）：
 
-跑通「加载音源 → 搜索 → 取链 → 歌词 → 下载 → 解码 → 播放推进 → 暂停」，
-任何一步失败非零退出。
-
-```sh
-.build/Cadence.app/Contents/MacOS/Cadence --snapshot /tmp/ui.png
-```
-
-把真实 UI 离屏渲染成 PNG（主窗口 + 桌面歌词面板各一张），用于无截屏权限时验收界面。
-
-## 已实现
-
-- 音源脚本在 `JSContext` 里运行，`lx.request / crypto / buffer / zlib / timers` 与 Q-music 的 preload 对齐
-- **四平台搜索**：酷狗 / 网易云 / 酷我 / QQ 音乐，各自适配接口与 `musicInfo` 字段
-  （`toOldMusicInfo` 兼容：`hash` / `songmid` / `rid` / `strMediaMid` / `copyrightId` …）
-- **歌词**：酷狗（krcs→lyrics，base64 LRC）、网易云、QQ 音乐；支持翻译轨合并；
-  **跨源回退**：任何源拿不到歌词时，用「歌名 + 歌手」在焰（网易云）匹配一次，所以珀（酷我）也有歌词
-- **渐进流播放**：下载 0.6–0.7 秒后出声（不等整首），边下边解码，缓冲不足自动暂停续播；
-  保留 10 段 EQ 预设、0.5–2.0x 变速（`AVAudioFile` 分块读取 → PCM → `AVAudioPlayerNode`）
-- **下载**：队列式、逐项进度、按平台分目录、重名自动加序号、Finder 定位、可取消
-- 桌面歌词：无边框 `NSPanel`，非激活、全空间常驻、当前行高亮 + 上下文淡出
-- 媒体键与系统「正在播放」：`MPRemoteCommandCenter` + `MPNowPlayingInfoCenter`，
-  进度随播放同步刷新，控制中心可拖拽定位
-- 音源管理：本地导入脚本 / **从链接导入（内联输入行，不是弹窗）** / 删除 / 切换，重名不会互相覆盖
-- macOS 形态：`NavigationSplitView` 侧栏 + 统一工具栏 `.searchable` 搜索 + `Settings` 面板 + ⌘D 下载
-- **菜单栏常驻**：关窗口不退出，缩到菜单栏；菜单里可播放/暂停、上一首/下一首、显示主窗口、桌面歌词、设置、退出
-  （关窗是「隐藏」而非销毁，SwiftUI 的窗口 delegate 通过转发代理保留）
-- 界面细节：真实封面（内存 + 磁盘双层缓存、限流预取）、播放中均衡器动效、带缓冲区的自绘进度条、
-  骨架屏、空状态、失败重试、播放键悬停反馈
-- **自绘 App 图标**：与界面里"播放中"的三根均衡器条同源，Dock 与菜单栏（播放中 `waveform`）一致
-
-## 实测平台覆盖（2026-11-20，来源 www.imwzh.com/lxmusic/）
-
-| 平台 | 搜索 | 取链 | 歌词 | 备注 |
+| 平台 | 搜索 | 取链 | 歌词 | 封面 |
 |---|---|---|---|---|
-| 酷狗 kg | ✅ | ✅ | ✅ | |
-| 网易云 wy | ✅ | ✅ | ✅ | |
-| 酷我 kw | ✅ | ✅ | — | 无公开歌词接口 |
-| QQ tx | ✅ | ✅ | ✅ | 搜索走 smartbox，结果条数受限 |
-| 咪咕 mg | ❌ | — | — | 搜索接口需签名/JS 校验，未接 |
+| 鲸 | ✅ | ✅ | ✅ | ✅ `album/info` |
+| 焰 | ✅ | ✅ | ✅ | ✅ `song/detail` |
+| 珀 | ✅ | ✅ | 跨源补齐 | 跨源匹配 |
+| 萤 | ✅ 约 10 条 | ✅ | ✅ | 跨源匹配 |
+| 咪咕 | ❌ 无匿名入口 | — | — | — |
 
-具体到音源：`fish_music v1.9.0` 四平台中 kg/kw/tx 全链路通过（kg 出 34.5 MB FLAC），
-wy 被它自己的“跨源严格匹配”拒绝；`HYWmusic` 后端返回 HTML，四平台全挂。
+一次完整链路（52.8 MB FLAC）：
 
-## 未实现（别当成已完成）
-- **先下载后播放**。渐进流 + EQ 需要 `AudioFileStream`/`MTAudioProcessingTap`，现在整首下完才出声
-- **咪咕（mg）** 搜索接口没有可用匿名入口
-- 无曲库/歌单/播放历史持久化（没有 SQLite），无账号登录、无云同步
-- 桌面歌词只解析 LRC；KRC 逐字歌词未做
-- 未做沙盒、Developer ID 签名、公证、自动更新
-- 媒体键、NSPanel 的跨空间行为、深色/浅色切换只在离屏渲染下检查过，**没有真机交互验收**
-
-## 渐进流实测（52.8 MB FLAC，`fish_music` 音源）
-
-```
+```text
 stream   started in 0.69 s  (est. duration 270 s, downloaded 1%)
 playing  position 2.98 s  buffered through 20.0 s  downloaded 100%
-seek     → 15.0 s, now 16.0 s  (ok)
+seek     → 216 s (80%), now 216.8 s, buffering=no
+download 周杰伦 - 晴天.flac  52.8 MB
 ```
 
-## 量到的数字（arm64 macOS 27.2.1）
+内存（arm64 macOS 27，`--idle-probe`）：
 
 | 场景 | RSS |
 |---|---|
-| 音源运行时（`lxspike`，单进程） | 19–25 MB |
-| Cadence 空转，未加载音源 | ~143 MB（SwiftUI/AppKit/AVFoundation/MediaPlayer 基线） |
-| Cadence 加载 1 个 640 KB 音源脚本 | ~150 MB，脚本跑定时器后会缓慢增长 |
-| 播放中（无窗口，自检） | 78–81 MB |
-| 封面缓存上限 | 48 张 / ≤256 px，约 10 MB |
+| 空转，未加载音源 | ~143 MB（SwiftUI/AppKit/AVFoundation 基线） |
+| 加载 1 个 640 KB 音源 | ~150 MB，脚本定时器会让它缓慢增长 |
+| 闲置后释放引擎 | 停止增长（不回落，macOS 不还页） |
+| 播放中（无窗口自检） | 78–82 MB |
 
-内存策略：每个音源独立 `JSVirtualMachine`；同一时刻只保留**当前音源**的引擎；
-闲置 90 s（菜单栏模式 30 s）后释放引擎与音频引擎。
-注意：释放后 JS 堆会还给分配器，但 macOS 不把这些页还给系统，所以
-RSS 表现为**停止增长/平台化**而不是明显下降；真正收益是脚本定时器停下、后续不会再爬。
+## 自检与开发
 
-App 壳的基线来自 SwiftUI/AppKit/AVFoundation/MediaPlayer 框架本身，不是音源运行时；
-音源部分每个约 20 MB，与 CLI 实测一致。
+```sh
+QMUSIC_SOURCE=<script.js> .build/Cadence.app/Contents/MacOS/Cadence --selftest
+```
 
-## 优化记录
+跑通「加载音源 → 搜索 → 取链 → 歌词 → 下载 → 解码 → 播放 → seek → 暂停」，任何一步失败非零退出。
 
-- 搜索：450 ms 防抖 + 任务取消 + 结果归属校验（旧请求不会覆盖新结果）
-- 音源加载：`withTaskGroup` 并行，不再串行等每个握手
-- 下载：并发上限 3，其余排队；取消/重试/清空
-- 封面：请求只发生在播放条与下载行（列表行仅在搜索结果自带封面时才拉）
-- 偏好持久化：平台、音质、侧栏分组、音量、EQ、窗口位置、桌面歌词位置
-- seek 全曲可用：超出缓冲区间时读循环等待下载追上，并显示缓冲状态（实测拖到 80% 正常续播）
-- 重复点击下载不会排队两次（同曲同音质去重）
-- `⌘1 / ⌘2 / ⌘3` 切搜索 / 下载 / 音源
-- 封面缓存可清：设置里显示张数与占用，一键清除（内存 + 磁盘）
+其它用途：
 
-## 已知捕获限制
+| 参数 | 作用 |
+|---|---|
+| `--snapshot out.png` | 离屏渲染真实界面（主窗口 / 音源 / 下载 / 歌词浮窗 / 控件探针） |
+| `--idle-probe` | 观察音源引擎的闲置释放与内存 |
+| `--inspect file.mp3` | 用 AVFoundation 读回标签，验证内嵌封面与歌词 |
+| `--window-test` | 验证「关窗不退出 + 菜单栏唤回」 |
+| `--import-test <url>` | 验证链接导入与主线程阻塞时长 |
+| `--cover-test` | 验证四个来源的封面取法 |
 
-离屏渲染时窗口的 **toolbar 安全区会被画成浅色**，压住搜索页顶部那一行（分段控件与按钮），
-看起来像“空白胶囊”。控件本身在 `-probe.png` 探针里渲染完全正常，说明是捕获路径而非布局问题。
-图标、列表、徽标、播放条、歌词面板都正常。真窗口仍需人工看一眼。
+## 常见问题
 
-`--snapshot` 会输出 5 张图：主窗口、音源页、下载页、歌词面板、控件探针。
+**打不开，提示无法验证开发者？**
+ad-hoc 签名、未公证。右键 → 打开，或 `xattr -d com.apple.quarantine /Applications/Cadence.app`。
 
-## 说明与免责
+**导入音源后列表里没有？**
+脚本初始化失败会被跳过（日志里有原因）。常见原因：脚本自身要先联网校验，或链接指向的不是 `.js`。
+体积大的脚本（数百 KB）初始化可能要十几秒，页头会显示「正在初始化音源…」，这期间界面不会卡。
 
-- 本项目是**独立实现**：不使用、也不包含任何上游项目的代码，也不附带任何音源脚本。
-  音源需要你自己导入（LX 格式的 `.js`），脚本由第三方提供，本仓库不分发。
-- 通过脚本解析出的播放地址指向第三方服务，请遵守你所在地区的法律与各平台的服务条款。
-- 界面里的四个来源使用隐喻名（鲸/焰/珀/萤），不涉及上游商标。
-- 许可：MIT（见 [LICENSE](./LICENSE)）。
+**萤（QQ 音乐）搜索结果很少？**
+走的是匿名 smartbox 接口，上限约十条；完整搜索需要登录态 cookie，本项目不做账号体系。
+
+**为什么没有咪咕？**
+其搜索接口需要签名/JS 校验，没有可用的匿名入口。
+
+**内存为什么比宣传的高？**
+1. 基线 ~143 MB 来自 SwiftUI/AppKit/AVFoundation/MediaPlayer 本身；播放器省不掉。
+2. 音源脚本是第三方代码，体积从 4 KB 到 640 KB 不等，会自己开定时器。
+   闲置 90 秒（菜单栏模式 30 秒）会释放引擎，代价是下次播放多一次初始化。
+
+**有 Intel 版吗？**
+目前只有 arm64。需要通用包的话要另编 x86_64 依赖。
+
+## 与上游 LX 音乐的关系
+
+Cadence 把 LX 音乐当作**协议来源**，而不是代码来源：
+
+- 音源脚本契约：`lx.EVENT_NAMES` / `lx.request` / `lx.on('request')` / `lx.send('inited')`、
+  `lx.utils.{crypto,buffer,zlib}`、回应校验规则（URL ≤ 2048、`^https?:`、lyric/pic 结构）
+- `musicInfo` 字段：按 `toOldMusicInfo` 的旧结构（`songmid` / `hash` / `rid` / `strMediaMid` /
+  `copyrightId` / `albumId` …）构造，第三方脚本无需修改
+- 交互借鉴：主备音源回退、独立的桌面歌词窗口、按平台分下载目录
+
+本仓库**不包含**上述任何项目的源代码，也**不分发音源脚本**。上游以 Apache-2.0 发布，
+本项目按派生作品处理，同样使用 Apache-2.0，详见 [LICENSE](./LICENSE) 与 [NOTICE](./NOTICE)。
+
+## 路线图
+
+- [ ] 曲库 / 歌单 / 播放历史（SQLite 持久化）
+- [ ] seek 使用 Range 请求，拖动不必等顺序下载
+- [ ] 通用二进制（Intel + Apple Silicon）
+- [ ] KRC 逐字歌词
+- [ ] Developer ID 签名与公证
+
+## 许可与致谢
+
+- 代码：[Apache-2.0](./LICENSE)，派生关系见 [NOTICE](./NOTICE)
+- 上游：[lyswhut/lx-music-desktop](https://github.com/lyswhut/lx-music-desktop)、
+  [Nshpiter/Q-music](https://github.com/Nshpiter/Q-music)
+- 音源脚本由第三方作者提供，本项目不分发；请遵守各平台服务条款与当地法律

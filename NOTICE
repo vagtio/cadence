@@ -1,0 +1,37 @@
+Cadence
+Copyright 2026 vagtio
+
+This product is a derivative work of the LX Music ecosystem.
+
+It includes an independent Swift/SwiftUI implementation, but its playback model,
+user-source (音源) script protocol and data structures are derived from:
+
+  LX Music (洛雪音乐助手)
+  https://github.com/lyswhut/lx-music-desktop
+  Copyright 2019-2026 lyswhut and contributors
+  Licensed under the Apache License, Version 2.0
+
+  Q-music
+  https://github.com/Nshpiter/Q-music
+  Copyright its contributors
+  Licensed under the Apache License, Version 2.0
+  (a fork of LX Music; this project studies its userApi bridge and platform
+   account handling for protocol compatibility)
+
+Specifically derived (protocol surface, not source code):
+
+  - the 音源 script contract: lx.EVENT_NAMES, lx.request, lx.on('request'),
+    lx.send('inited'), lx.utils.{crypto,buffer,zlib}, response validation rules
+    (URL length <= 2048, ^https?:, lyric/pic shapes)
+  - the legacy musicInfo field layout produced by common/utils/tools.ts
+    (toOldMusicInfo): songmid / hash / rid / strMediaMid / copyrightId / albumId
+  - interaction ideas: primary + backup source fallback, a separate desktop
+    lyrics window, per-platform download folders
+
+No source file from the projects above is copied into this repository, and no
+音源 scripts are distributed here — users import their own.
+
+Trademarks and platform names belong to their respective owners. The UI refers to
+sources by metaphor (鲸 / 焰 / 珀 / 萤) rather than by upstream brand.
+
+This project is licensed under the Apache License, Version 2.0 (see LICENSE).

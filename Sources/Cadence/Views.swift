@@ -70,6 +70,9 @@ struct PlatformPicker: View {
 
 struct ContentView: View {
   @EnvironmentObject var state: AppState
+  /// Snapshot builds skip the toolbar search field, whose reserved safe area
+  /// renders as an empty band when the window toolbar is not part of the capture.
+  var isSnapshot = false
 
   var body: some View {
     VStack(spacing: 0) {
@@ -77,12 +80,20 @@ struct ContentView: View {
         sidebar
           .navigationSplitViewColumnWidth(min: 200, ideal: 212, max: 260)
       } detail: {
-        detail
-          .navigationTitle(title)
-          .navigationSubtitle(subtitle)
-          .searchable(text: $state.keyword, prompt: "搜索歌曲、歌手")
-          .onSubmit(of: .search) { state.search() }
-          .toolbar { toolbar }
+        if isSnapshot {
+          // No toolbar at all: SwiftUI would reserve its strip and the offscreen
+          // capture shows that strip as an empty band.
+          detail
+            .navigationTitle(title)
+            .navigationSubtitle(subtitle)
+        } else {
+          detail
+            .navigationTitle(title)
+            .navigationSubtitle(subtitle)
+            .searchable(text: $state.keyword, prompt: "搜索歌曲、歌手")
+            .onSubmit(of: .search) { state.search() }
+            .toolbar { toolbar }
+        }
       }
       Divider()
       PlayerBar()

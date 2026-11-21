@@ -487,13 +487,13 @@ extension SelfTest {
     )
     state.section = .sources
     await render(
-      ContentView().environmentObject(state).environmentObject(state.audio),
+      ContentView(isSnapshot: true).environmentObject(state).environmentObject(state.audio),
       size: CGSize(width: 1160, height: 720),
       to: path.replacingOccurrences(of: ".png", with: "-sources.png")
     )
     state.section = .downloads
     await render(
-      ContentView().environmentObject(state).environmentObject(state.audio),
+      ContentView(isSnapshot: true).environmentObject(state).environmentObject(state.audio),
       size: CGSize(width: 1160, height: 720),
       to: path.replacingOccurrences(of: ".png", with: "-downloads.png")
     )
@@ -531,9 +531,11 @@ extension SelfTest {
   private static func render<V: View>(_ view: V, size: CGSize, to path: String) async {
     let hosting = NSHostingView(rootView: view)
     hosting.frame = CGRect(origin: .zero, size: size)
+    // Borderless: a titled window reserves toolbar safe area, which renders as an
+    // empty band when the toolbar itself is not part of the hosting view.
     let window = NSWindow(
       contentRect: hosting.frame,
-      styleMask: [.titled],
+      styleMask: [],
       backing: .buffered,
       defer: false
     )
