@@ -1,0 +1,15 @@
+# build output
+.build/
+build/
+*.dmg
+*.zip
+
+# Xcode / SwiftPM noise
+.swiftpm/
+DerivedData/
+
+# generated icon preview (regenerate with: swift Tools/make-icon.swift)
+Resources/icon-1024.png
+
+# macOS
+.DS_Store
